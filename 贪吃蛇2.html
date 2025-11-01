@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>贪吃蛇大冒险</title>
+    <style>
+        /* 加载动画样式 */
+        .loader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #f0f2f5;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s;
+        }
+        .loader-progress {
+            width: 300px;
+            height: 20px;
+            background: #e6f4ea;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        .progress-bar {
+            width: 0;
+            height: 100%;
+            background: #42b983;
+            transition: width 0.3s;
+        }
+        #loader-snake {
+            position: absolute;
+            top: -15px;
+            width: 30px;
+            height: 30px;
+            transition: left 0.3s;
+        }
+
+        /* 基础样式 */
+        body { 
+            font-family: '微软雅黑', sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #f0f2f5;
+            min-height: 100vh;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .control-panel {
+            width: 300px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .panel-section {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: none; 
+        }
+        .active-panel { display: block; } 
+        .game-container {
+            border: 2px solid #333;
+            background: #fff;
+            flex-grow: 1;
+        }
+        .main-menu {
+            text-align: center;
+            max-width: 400px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            display: none; /* 初始隐藏 */
+        }
+        .menu-btn {
+            padding: 12px 25px;
+            margin: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #42b983;
+            color: white;
+            font-size: 16px;
+            width: 200px;
+        }
+        .back-btn {
+            background: #666; 
+            width: 150px; 
+            padding: 8px 15px;
+            margin: 15px 0 0 0;
+        }
+        #speed-select {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            justify-content: space-between;
+        }
+        .speed-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #e6f4ea;
+            color: #333;
+            flex: 1;
+            min-width: 80px;
+        }
+        .speed-btn.active {
+            background: #42b983;
+            color: white;
+        }
+        .skin-item {
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+        }
+        .skin-item.locked { opacity: 0.7; }
+        .skin-item button {
+            padding: 5px 10px;
+            background: #409eff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        #custom-skin {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        #upload-preview {
+            max-width: 100%;
+            height: 80px;
+            border: 1px dashed #ccc;
+            margin-top: 5px;
+            object-fit: cover;
+        }
+        .obstacle-setting {
+            margin: 15px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .obstacle-setting input {
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100px;
+        }
+        #pauseBtn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #ff4d4f;
+            color: white;
+            margin-top: 10px;
+        }
+        .score-display {
+            margin: 15px 0;
+            color: #333;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 加载动画 -->
+    <div class="loader-container" id="loader">
+        <h2>贪吃蛇加载中...</h2>
+        <div class="loader-progress">
+            <div class="progress-bar" id="progressBar"></div>
+            <img id="loader-snake" src="data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'><circle cx='15' cy='15' r='12' fill='%2342b983'/></svg>" alt="加载蛇">
+        </div>
+    </div>
+
+    <!-- 主菜单 -->
+    <div class="main-menu" id="mainMenu">
+        <h1>贪吃蛇大冒险</h1>
+        <div class="score-display">总积分：<span id="mainTotalScore">0</span></div>
+        <button class="menu-btn" id="startGameBtn">开始游戏</button>
+        <button class="menu-btn" id="openShopBtn">皮肤商城</button>
+        <button class="menu-btn" id="openProfileBtn">个人中心</button>
+    </div>
+
+    <!-- 游戏界面 -->
+    <div class="container" id="gameInterface" style="display: none;">
+        <div class="control-panel">
+            <div class="panel-section active-panel" id="gameControl">
+                <h3>游戏设置</h3>
+                <div id="speed-select">
+                    <button class="speed-btn" data-speed="300">慢</button>
+                    <button class="speed-btn" data-speed="200">中</button>
+                    <button class="speed-btn" data-speed="100">快</button>
+                </div>
+                <div class="obstacle-setting">
+                    <label>障碍物数量：</label>
+                    <input type="number" id="obstacleCount" min="0" value="0" placeholder="0-10">
+                    <small>（0-10个，建议不超过10）</small>
+                </div>
+                <button id="pauseBtn">暂停</button>
+                <div class="score-display">当前积分：<span id="currentScore">0</span></div>
+                <button class="menu-btn back-btn" id="backToMainFromGame">返回主界面</button>
+            </div>
+
+            <div class="panel-section" id="shopPanel">
+                <h3>皮肤商城</h3>
+                <div class="score-display">总积分：<span id="shopTotalScore">0</span></div>
+                <div id="shop"></div>
+                <button class="menu-btn back-btn" id="backToMainFromShop">返回主界面</button>
+            </div>
+
+            <div class="panel-section" id="profilePanel">
+                <h3>个人中心</h3>
+                <div class="score-display">总积分：<span id="profileTotalScore">0</span></div>
+                <div id="currentSkinInfo">当前皮肤：默认皮肤</div>
+                <div id="custom-skin">
+                    <p>自定义皮肤（20x20像素）：</p>
+                    <input type="file" id="skinUpload" accept="image/*">
+                    <img id="uploadPreview" alt="上传预览">
+                    <button id="useCustomSkin">使用自定义皮肤</button>
+                </div>
+                <button class="menu-btn back-btn" id="backToMainFromProfile">返回主界面</button>
+            </div>
+        </div>
+
+        <canvas class="game-container" id="gameCanvas" width="600" height="400"></canvas>
+    </div>
+
+    <script>
+        // 加载动画逻辑
+        const loader = document.getElementById('loader');
+        const progressBar = document.getElementById('progressBar');
+        const loaderSnake = document.getElementById('loader-snake');
+        let progress = 0;
+
+        function simulateLoading() {
+            const interval = setInterval(() => {
+                progress += Math.random() * 5; 
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    progress = 100;
+                    setTimeout(() => {
+                        loader.style.opacity = 0;
+                        setTimeout(() => {
+                            loader.style.display = 'none';
+                            document.getElementById('mainMenu').style.display = 'block';
+                        }, 500);
+                    }, 300);
+                }
+                progressBar.style.width = `${progress}%`;
+                loaderSnake.style.left = `${progress}%`;
+                loaderSnake.style.transform = `translateX(-50%)`;
+            }, 100);
+        }
+
+        window.onload = () => {
+            simulateLoading();
+        };
+
+        // 游戏核心逻辑
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gridSize = 20;
+        let snake = [{ x: 10, y: 10 }];
+        let food = { x: 15, y: 15 };
+        let obstacles = [];
+        let dx = 0;
+        let dy = 0;
+        let gameLoop;
+        let speed = 200;
+        let currentScore = 0; 
+        let isGameRunning = false;
+        let isPaused = false;
+        let obstacleCount = 0;
+
+        const defaultSkins = [
+            { id: 'default', price: 0, color: '#42b983', owned: true },
+            { id: 'red', price: 200, color: '#ff4d4f', owned: false },
+            { id: 'blue', price: 500, color: '#1890ff', owned: false },
+            { id: 'gold', price: 800, color: '#faad14', owned: false }
+        ];
+
+        let userData = {
+            totalScore: 0, 
+            ownedSkins: ['default'],
+            currentSkin: 'default',
+            customSkin: null
+        };
+
+        function updateTotalScoreDisplay() {
+            document.getElementById('mainTotalScore').textContent = userData.totalScore;
+            document.getElementById('shopTotalScore').textContent = userData.totalScore;
+            document.getElementById('profileTotalScore').textContent = userData.totalScore;
+        }
+
+        function generateObstacles(count) {
+            obstacles = [];
+            const maxX = canvas.width / gridSize - 1;
+            const maxY = canvas.height / gridSize - 1;
+
+            for (let i = 0; i < count; i++) {
+                let newObstacle;
+                do {
+                    newObstacle = {
+                        x: Math.floor(Math.random() * maxX),
+                        y: Math.floor(Math.random() * maxY)
+                    };
+                } while (
+                    snake.some(segment => segment.x === newObstacle.x && segment.y === newObstacle.y) ||
+                    (newObstacle.x === food.x && newObstacle.y === food.y) ||
+                    obstacles.some(obs => obs.x === newObstacle.x && obs.y === newObstacle.y)
+                );
+                obstacles.push(newObstacle);
+            }
+        }
+
+        function initStorage() {
+            const savedData = localStorage.getItem('snakeUserData');
+            if (savedData) userData = JSON.parse(savedData);
+            else localStorage.setItem('snakeUserData', JSON.stringify(userData));
+            updateTotalScoreDisplay();
+        }
+
+        function showPanel(panelId) {
+            document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active-panel'));
+            document.getElementById(panelId).classList.add('active-panel');
+        }
+
+        function renderShop() {
+            const shopHtml = defaultSkins.map(skin => `
+                <div class="skin-item ${skin.owned ? '' : 'locked'}">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 20px; height: 20px; background: ${skin.color}; border-radius: 3px;"></div>
+                        ${skin.id}皮肤
+                    </div>
+                    <div>
+                        ${skin.owned ? '已拥有' : `¥${skin.price}积分`}
+                        ${!skin.owned ? `<button data-id="${skin.id}" data-price="${skin.price}">购买</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('shop').innerHTML = shopHtml;
+
+            document.querySelectorAll('#shop button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const skinId = btn.dataset.id;
+                    const price = parseInt(btn.dataset.price);
+                    if (userData.totalScore >= price) {
+                        userData.totalScore -= price;
+                        userData.ownedSkins.push(skinId);
+                        saveUserData();
+                        renderShop();
+                        updateProfileSkinInfo();
+                    } else {
+                        alert(`积分不足！当前总积分：${userData.totalScore}`);
+                    }
+                });
+            });
+        }
+
+        function updateProfileSkinInfo() {
+            const skin = defaultSkins.find(s => s.id === userData.currentSkin) || { id: 'custom' };
+            document.getElementById('currentSkinInfo').textContent = 
+                userData.currentSkin === 'custom' ? '当前皮肤：自定义皮肤' : `当前皮肤：${skin.id}皮肤`;
+        }
+
+        document.getElementById('skinUpload').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        if (img.width === 20 && img.height === 20) {
+                            userData.customSkin = e.target.result;
+                            saveUserData();
+                            document.getElementById('uploadPreview').src = e.target.result;
+                            alert('皮肤上传成功！可点击"使用自定义皮肤"启用');
+                        } else {
+                            alert('请上传20x20像素的图片！');
+                        }
+                    };
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('useCustomSkin').addEventListener('click', () => {
+            if (userData.customSkin) {
+                userData.currentSkin = 'custom';
+                saveUserData();
+                updateProfileSkinInfo();
+            }
+        });
+
+        function update() {
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                currentScore += 10;
+                document.getElementById('currentScore').textContent = currentScore;
+                generateFood();
+            } else {
+                snake.pop();
+            }
+
+            if (isCollision(head)) {
+                gameOver();
+                return;
+            }
+
+            draw();
+        }
+
+        function draw() {
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            obstacles.forEach(obs => {
+                ctx.fillStyle = '#666';
+                ctx.fillRect(obs.x * gridSize, obs.y * gridSize, gridSize-2, gridSize-2);
+            });
+
+            snake.forEach(segment => {
+                ctx.fillStyle = getSkinColor();
+                ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize-2, gridSize-2);
+            });
+
+            ctx.fillStyle = '#ff4d4f';
+            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize-2, gridSize-2);
+        }
+
+        function getSkinColor() {
+            if (userData.currentSkin === 'custom' && userData.customSkin) {
+                return `url(${userData.customSkin})`;
+            }
+            const skin = defaultSkins.find(s => s.id === userData.currentSkin);
+            return skin ? skin.color : '#42b983';
+        }
+
+        function generateFood() {
+            let newFood;
+            do {
+                newFood = {
+                    x: Math.floor(Math.random() * (canvas.width/gridSize)),
+                    y: Math.floor(Math.random() * (canvas.height/gridSize))
+                };
+            } while (
+                obstacles.some(obs => obs.x === newFood.x && obs.y === newFood.y) ||
+                snake.some(segment => segment.x === newFood.x && segment.y === newFood.y)
+            );
+            food = newFood;
+        }
+
+        function isCollision(head) {
+            if (head.x < 0 || head.x >= canvas.width/gridSize || 
+                head.y < 0 || head.y >= canvas.height/gridSize) return true;
+            
+            if (snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y)) return true;
+
+            if (obstacles.some(obs => obs.x === head.x && obs.y === head.y)) return true;
+
+            return false;
+        }
+
+        function gameOver() {
+            clearInterval(gameLoop);
+            isGameRunning = false;
+            isPaused = false;
+            userData.totalScore += currentScore;
+            saveUserData();
+            alert(`游戏结束！本次获得${currentScore}积分，总积分：${userData.totalScore}`);
+            
+            snake = [{ x: 10, y: 10 }];
+            dx = 0;
+            dy = 0;
+            currentScore = 0;
+            obstacles = [];
+            document.getElementById('currentScore').textContent = 0;
+            document.getElementById('pauseBtn').textContent = '暂停';
+            document.getElementById('mainMenu').style.display = 'block';
+            document.getElementById('gameInterface').style.display = 'none';
+        }
+
+        function saveUserData() {
+            localStorage.setItem('snakeUserData', JSON.stringify(userData));
+            updateTotalScoreDisplay();
+        }
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            if (!isGameRunning) return;
+            
+            if (isPaused) {
+                isPaused = false;
+                document.getElementById('pauseBtn').textContent = '暂停';
+                gameLoop = setInterval(update, speed);
+            } else {
+                isPaused = true;
+                document.getElementById('pauseBtn').textContent = '继续';
+                clearInterval(gameLoop);
+            }
+        });
+
+        function goBackToMain() {
+            document.getElementById('mainMenu').style.display = 'block';
+            document.getElementById('gameInterface').style.display = 'none';
+            isGameRunning = false;
+            isPaused = false;
+            clearInterval(gameLoop);
+            snake = [{ x: 10, y: 10 }];
+            dx = 0;
+            dy = 0;
+            currentScore = 0;
+            obstacles = [];
+            document.getElementById('currentScore').textContent = 0;
+            document.getElementById('pauseBtn').textContent = '暂停';
+        }
+
+        document.getElementById('backToMainFromGame').addEventListener('click', goBackToMain);
+        document.getElementById('backToMainFromShop').addEventListener('click', goBackToMain);
+        document.getElementById('backToMainFromProfile').addEventListener('click', goBackToMain);
+
+        document.getElementById('startGameBtn').addEventListener('click', () => {
+            if (!isGameRunning) {
+                obstacleCount = Math.min(10, Math.max(0, parseInt(document.getElementById('obstacleCount').value) || 0));
+                generateObstacles(obstacleCount);
+                
+                document.getElementById('mainMenu').style.display = 'none';
+                document.getElementById('gameInterface').style.display = 'flex';
+                showPanel('gameControl');
+                dx = 1; 
+                dy = 0;
+                isGameRunning = true;
+                isPaused = false;
+                document.getElementById('pauseBtn').textContent = '暂停';
+                gameLoop = setInterval(update, speed);
+            }
+        });
+
+        document.getElementById('openShopBtn').addEventListener('click', () => {
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('gameInterface').style.display = 'flex';
+            showPanel('shopPanel');
+            renderShop();
+            updateTotalScoreDisplay();
+        });
+
+        document.getElementById('openProfileBtn').addEventListener('click', () => {
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('gameInterface').style.display = 'flex';
+            showPanel('profilePanel');
+            updateProfileSkinInfo();
+            updateTotalScoreDisplay();
+        });
+
+        document.querySelectorAll('.speed-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                speed = parseInt(btn.dataset.speed);
+                document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                if (isGameRunning && !isPaused) {
+                    clearInterval(gameLoop);
+                    gameLoop = setInterval(update, speed);
+                }
+            });
+        });
+
+        document.getElementById('obstacleCount').addEventListener('input', () => {
+            if (isGameRunning && isPaused) {
+                obstacleCount = Math.min(10, Math.max(0, parseInt(document.getElementById('obstacleCount').value) || 0));
+                generateObstacles(obstacleCount);
+                draw();
+            }
+        });
+
+        // 修复方向键滚动问题的关键代码
+        document.addEventListener('keydown', (e) => {
+            if (!isGameRunning || isPaused) return;
+            const key = e.key;
+            const goingUp = dy === -1;
+            const goingDown = dy === 1;
+            const goingRight = dx === 1;
+            const goingLeft = dx === -1;
+
+            // 阻止方向键的默认滚动行为
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
+                e.preventDefault();
+            }
+
+            if (key === 'ArrowUp' && !goingDown) { dy = -1; dx = 0; }
+            if (key === 'ArrowDown' && !goingUp) { dy = 1; dx = 0; }
+            if (key === 'ArrowLeft' && !goingRight) { dx = -1; dy = 0; }
+            if (key === 'ArrowRight' && !goingLeft) { dx = 1; dy = 0; }
+        });
+
+        initStorage();
+        generateFood();
+    </script>
+</body>
+</html>
+    
