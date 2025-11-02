@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>温馨提示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", sans-serif;
+        }
+
+        body {
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f5f5f5;
+        }
+
+        /* 弹窗样式 */
+        .tip-box {
+            position: absolute;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            font-size: 1.1rem;
+            text-align: center;
+            z-index: 9999; /* 置顶显示 */
+            transition: all 0.3s ease;
+            cursor: pointer;
+            max-width: 80vw; /* 适配手机宽度 */
+            min-width: 120px;
+            animation: popIn 0.5s ease-out;
+        }
+
+        /* 弹出动画 */
+        @keyframes popIn {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* 关闭动画 */
+        .tip-box.close {
+            transform: scale(0.8);
+            opacity: 0;
+        }
+
+        /* 底部控制栏 */
+        .control-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            z-index: 10000;
+        }
+
+        .control-btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            background-color: #4299e1;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(66, 153, 225, 0.3);
+            transition: background-color 0.2s;
+        }
+
+        .control-btn.stop {
+            background-color: #e53e3e;
+        }
+
+        .control-btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <!-- 控制按钮 -->
+    <div class="control-bar">
+        <button class="control-btn start" onclick="startTips()">开始弹出</button>
+        <button class="control-btn stop" onclick="stopTips()">停止并清理</button>
+    </div>
+
+    <script>
+        // 配置参数
+        const config = {
+            tipCount: 100,          // 最大弹窗数量（手机端适当减少）
+            interval: 200,         // 弹窗间隔时间（毫秒）
+            duration: 10000,        // 弹窗自动消失时间（毫秒）
+            tips: [
+                '多喝水哦~', '保持微笑呀', '每天都要元气满满',
+                '记得吃水果', '保持好心情', '好好爱自己', '我想你了',
+                '梦想成真', '期待下一次见面', '金榜题名',
+                '顺顺利利', '早点休息', '愿所有烦恼都消失',
+                '别熬夜', '今天过得开心嘛', '天冷了，多穿衣服'
+            ],
+            bgColors: [
+                'lightpink', 'skyblue', 'lightgreen', 'lavender',
+                'lightyellow', 'plum', 'coral', 'bisque', 'aquamarine',
+                'mistyrose', 'honeydew', 'lavenderblush', 'oldlace'
+            ]
+        };
+
+        let isRunning = false;
+        let tipIndex = 0;
+        let timer = null;
+
+        // 生成随机位置（确保弹窗完全显示在屏幕内）
+        function getRandomPosition() {
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+            const tipWidth = Math.min(250, screenWidth * 0.8);
+            const tipHeight = 80;
+
+            // 随机位置（避开底部控制栏）
+            const x = Math.floor(Math.random() * (screenWidth - tipWidth));
+            const y = Math.floor(Math.random() * (screenHeight - tipHeight - 100)); // 预留底部控制栏空间
+
+            return { x, y, width: tipWidth };
+        }
+
+        // 创建单个提示弹窗
+        function createTipBox() {
+            if (tipIndex >= config.tipCount) {
+                stopTips();
+                return;
+            }
+
+            const tipBox = document.createElement('div');
+            tipBox.className = 'tip-box';
+
+            // 随机配置
+            const tip = config.tips[Math.floor(Math.random() * config.tips.length)];
+            const bgColor = config.bgColors[Math.floor(Math.random() * config.bgColors.length)];
+            const position = getRandomPosition();
+
+            // 设置样式和内容
+            tipBox.textContent = tip;
+            tipBox.style.backgroundColor = bgColor;
+            tipBox.style.left = `${position.x}px`;
+            tipBox.style.top = `${position.y}px`;
+            tipBox.style.width = `${position.width}px`;
+
+            // 点击关闭
+            tipBox.addEventListener('click', () => {
+                closeTipBox(tipBox);
+            });
+
+            // 添加到页面
+            document.body.appendChild(tipBox);
+            tipIndex++;
+
+            // 自动关闭
+            setTimeout(() => {
+                closeTipBox(tipBox);
+            }, config.duration);
+        }
+
+        // 关闭弹窗
+        function closeTipBox(tipBox) {
+            tipBox.classList.add('close');
+            setTimeout(() => {
+                if (tipBox.parentNode) {
+                    document.body.removeChild(tipBox);
+                }
+            }, 300);
+        }
+
+        // 开始弹出提示
+        function startTips() {
+            if (isRunning) return;
+
+            isRunning = true;
+            tipIndex = 0;
+
+            // 立即创建第一个
+            createTipBox();
+
+            // 定时创建后续弹窗
+            timer = setInterval(() => {
+                createTipBox();
+            }, config.interval);
+        }
+
+        // 停止并清理所有弹窗
+        function stopTips() {
+            isRunning = false;
+            clearInterval(timer);
+
+            // 移除所有弹窗
+            const tipBoxes = document.querySelectorAll('.tip-box');
+            tipBoxes.forEach(box => closeTipBox(box));
+        }
+
+        // 监听窗口大小变化时重新调整
+        window.addEventListener('resize', () => {
+            const tipBoxes = document.querySelectorAll('.tip-box');
+            tipBoxes.forEach(box => {
+                const position = getRandomPosition();
+                box.style.left = `${position.x}px`;
+                box.style.top = `${position.y}px`;
+                box.style.width = `${position.width}px`;
+            });
+        });
+    </script>
+</body>
+</html>
